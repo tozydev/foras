@@ -6,9 +6,6 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 plugins {
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.ktlint) apply false
-    alias(libs.plugins.paperweight.userdev) apply false
-    alias(libs.plugins.run.paper) apply false
-    alias(libs.plugins.shadow) apply false
 }
 
 val kotlinJvmId =
