@@ -5,9 +5,18 @@ paper = "1.21.1-R0.1-SNAPSHOT"
 paperweight = "1.7.2"
 run-task = "2.3.1"
 shadow = "8.3.2"
+adventure = "4.17.0"
+
+# Test
+mockk = "1.13.12"
 
 [libraries]
+adventure-api = { module = "net.kyori:adventure-api", version.ref = "adventure" }
+adventure-key = { module = "net.kyori:adventure-key", version.ref = "adventure" }
+adventure-text-minimessage = { module = "net.kyori:adventure-text-minimessage", version.ref = "adventure" }
 
+# Test
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

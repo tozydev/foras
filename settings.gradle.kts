@@ -7,6 +7,7 @@ rootProject.name = "foras"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 subproject("core")
+subproject("adventure")
 
 fun subproject(
     module: String,
