@@ -1,4 +1,0 @@
-name: $name
-version: $version
-api-version: "1.21"
-main: io.github.tozydev.paper.PaperTemplatePlugin
