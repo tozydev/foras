@@ -9,11 +9,13 @@ adventure = "4.17.0"
 
 # Test
 mockk = "1.13.12"
+jackson = "2.18.0-rc1"
 
 [libraries]
 adventure-api = { module = "net.kyori:adventure-api", version.ref = "adventure" }
 adventure-key = { module = "net.kyori:adventure-key", version.ref = "adventure" }
 adventure-text-minimessage = { module = "net.kyori:adventure-text-minimessage", version.ref = "adventure" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
 
 # Test
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }

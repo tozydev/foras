@@ -8,6 +8,7 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 subproject("core")
 subproject("adventure")
+subproject("jackson")
 
 fun subproject(
     module: String,

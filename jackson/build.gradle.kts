@@ -5,5 +5,4 @@ plugins {
 dependencies {
     implementation(projects.forasCore)
     implementation(libs.jackson.databind)
-    implementation(libs.jackson.dataformat.yaml)
 }

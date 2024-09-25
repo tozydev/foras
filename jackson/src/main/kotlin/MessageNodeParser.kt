@@ -1,120 +1,121 @@
 package io.github.tozydev.foras.jackson
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ArrayNode
-import com.fasterxml.jackson.databind.node.NullNode
-import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.databind.node.ValueNode
-import io.github.tozydev.foras.ActionbarMessage
-import io.github.tozydev.foras.EmptyMessage
 import io.github.tozydev.foras.Message
-import io.github.tozydev.foras.SoundMessage
-import io.github.tozydev.foras.TextMessage
-import io.github.tozydev.foras.TitleMessage
-import io.github.tozydev.foras.jackson.MessageNodeParser.Fields.ACTIONBAR
-import io.github.tozydev.foras.jackson.MessageNodeParser.Fields.FADEIN
-import io.github.tozydev.foras.jackson.MessageNodeParser.Fields.FADEOUT
-import io.github.tozydev.foras.jackson.MessageNodeParser.Fields.FADE_IN
-import io.github.tozydev.foras.jackson.MessageNodeParser.Fields.FADE_OUT
-import io.github.tozydev.foras.jackson.MessageNodeParser.Fields.PITCH
-import io.github.tozydev.foras.jackson.MessageNodeParser.Fields.SEED
-import io.github.tozydev.foras.jackson.MessageNodeParser.Fields.SOUND
-import io.github.tozydev.foras.jackson.MessageNodeParser.Fields.SOURCE
-import io.github.tozydev.foras.jackson.MessageNodeParser.Fields.STAY
-import io.github.tozydev.foras.jackson.MessageNodeParser.Fields.SUBTITLE
-import io.github.tozydev.foras.jackson.MessageNodeParser.Fields.TEXT
-import io.github.tozydev.foras.jackson.MessageNodeParser.Fields.TITLE
-import io.github.tozydev.foras.jackson.MessageNodeParser.Fields.VOLUME
-import kotlin.time.Duration
 
-internal object MessageNodeParser {
-    fun parse(node: JsonNode?): Message =
-        when (node) {
-            is ValueNode -> parseTextNode(node)
-            is ArrayNode -> node.map { parse(it) }.let(::Message)
-            is ObjectNode -> parseMessageNode(node)
-            else -> EmptyMessage
+/** A parser that can determine if a [JsonNode] represents a [Message] and parse it accordingly. */
+interface MessageNodeParser {
+    /** Whether the given [JsonNode] can be parsed as a [Message]. */
+    fun isMessageNode(node: JsonNode): Boolean
+
+    /**
+     * Parses the given [JsonNode] into a [Message].
+     *
+     * @throws IllegalArgumentException If the node cannot be parsed as a [Message].
+     */
+    fun parse(node: JsonNode): Message
+
+    /**
+     * A default implementation of [MessageNodeParser] that parses [JsonNode] according to the
+     * following rules:
+     *
+     * - **Arrays:** Treated as [Message] instances containing multiple sub-messages.
+     * - **Objects:** Parsed based on the presence of specific fields:
+     *    - `"text"`: Parsed as a [TextMessage].
+     *    - `"actionbar"`: Parsed as an [ActionbarMessage].
+     *    - `"sound"`: Parsed as a [SoundMessage] along with optional fields
+     *       (`"source"`, `"volume"`, `"pitch"`, `"seed"`).
+     *    - `"title"`, `"subtitle"`, `"fade-in"`, `"fade-out"`, `"stay"`: Parsed as a
+     *       [TitleMessage].
+     * - **Booleans, Nulls, Numbers, Strings:** Parsed as [io.github.tozydev.foras.TextMessage] instances, with null
+     *   values becoming [io.github.tozydev.foras.EmptyMessage].
+     * - **Other Node Types:** Throw an [IllegalArgumentException].
+     *
+     * For object nodes representing messages with content, the content can be specified
+     * using either short-form field names (`"fadein"`) or kebab-case names (`"fade-in"`).
+     *
+     * **Example JSON:**
+     * ```json
+     * {
+     *   "message": { "text": "Hello, world!" },
+     *   "actionbar_message": { "actionbar": "This is an action bar message." },
+     *   "sound_message": {
+     *     "sound": "minecraft:entity.pig.ambient",
+     *     "source": "player",
+     *     "volume": 2.0,
+     *     "pitch": 1.5
+     *   },
+     *   "title_message": {
+     *     "title": "Welcome!",
+     *     "subtitle": "To this amazing server",
+     *     "fade-in": "1s",
+     *     "stay": "2s",
+     *     "fade-out": "1s"
+     *   }
+     * }
+     * ```
+     */
+    companion object Default : MessageNodeParser by MessageNodeParserImpl
+
+    /**
+     * A parser that can parse a [JsonNode] into a [Map] of [String] keys to [Message] values.
+     */
+    interface MapParser {
+        /**
+         * The separator used to delimit nested keys in the Jackson supported structure.
+         */
+        val pathSeparator: Char
+
+        /** Parses the given [JsonNode] into a [Map] of [String] keys to [Message] values. */
+        fun parse(node: JsonNode): Map<String, Message>
+
+        /**
+         * A default implementation of [MapParser] that parses a [JsonNode] into a [Map] of
+         * [String] keys to [Message] values. It utilizes [MessageNodeParser.Default] to handle
+         * individual message nodes and uses a dot ('.') to separate nested keys within the
+         * Jackson supported structure.
+         *
+         * This implementation recursively traverses the tree, concatenating nested object
+         * keys with dots to create a flat map of key-value pairs, where the keys represent the
+         * full path to a message node and the values are the parsed [Message] instances.
+         *
+         * **Note:** The keys of nested objects cannot have the same names as the fields used
+         * to define message content (e.g., "text", "actionbar", "sound", "title", etc.).
+         *
+         * **Example JSON:**
+         * ```json
+         * {
+         *   "message": { "text": "Hello, world!" },
+         *   "nested": {
+         *     "_actionbar": { "actionbar": "This is an action bar message." },
+         *     "_title": {
+         *       "title": "Welcome!",
+         *       "subtitle": "To this amazing server"
+         *     }
+         *   }
+         * }
+         * ```
+         *
+         * **Resulting Map:**
+         * ```
+         * {
+         *   "message": TextMessage(text="Hello, world!"),
+         *   "nested._actionbar": ActionbarMessage(actionbar="This is an action bar message."),
+         *   "nested._title": TitleMessage(title="Welcome!", subtitle="To this amazing server")
+         * }
+         * ```
+         */
+        companion object Default : MapParser {
+            /**
+             * The default path separator used by [Default], which is a dot ('.').
+             */
+            const val DOT_PATH_SEPARATOR = '.'
+
+            private val delegate by lazy { MapParserImpl(MessageNodeParser.Default, DOT_PATH_SEPARATOR) }
+
+            override val pathSeparator = delegate.pathSeparator
+
+            override fun parse(node: JsonNode) = delegate.parse(node)
         }
-
-    private fun parseTextNode(node: JsonNode) = if (node is NullNode) EmptyMessage else TextMessage(node.asText())
-
-    private fun parseMessageNode(node: ObjectNode): Message {
-        var contentNode = node[TEXT]
-        if (contentNode != null) {
-            return parseTextNode(contentNode)
-        }
-
-        contentNode = node[ACTIONBAR]
-        if (contentNode != null) {
-            return parseActionbarNode(contentNode)
-        }
-
-        contentNode = node[SOUND]
-        if (contentNode != null) {
-            return parseSoundNode(node)
-        }
-
-        return parseTitleNode(node) ?: EmptyMessage
-    }
-
-    private fun parseTitleNode(node: JsonNode): TitleMessage? {
-        val title = node[TITLE]
-        val subtitle = node[SUBTITLE]
-        val fadeIn = node[FADE_IN] ?: node[FADEIN]
-        val stay = node[STAY]
-        val fadeOut = node[FADE_OUT] ?: node[FADEOUT]
-        if (title == null && subtitle == null && fadeIn == null && stay == null && fadeOut == null) {
-            return null
-        }
-        return TitleMessage(
-            title = title.nullOrText(),
-            subtitle = subtitle.nullOrText(),
-            fadeIn = fadeIn.nullOrText()?.let(Duration::parse),
-            stay = stay.nullOrText()?.let(Duration::parse),
-            fadeOut = fadeOut.nullOrText()?.let(Duration::parse),
-        )
-    }
-
-    private fun parseActionbarNode(node: JsonNode) = ActionbarMessage(node.asText())
-
-    private fun parseSoundNode(node: JsonNode): SoundMessage {
-        val sound = node[SOUND]
-        val source = node[SOURCE]
-        val volume = node[VOLUME]
-        val pitch = node[PITCH]
-        val seed = node[SEED]
-        return SoundMessage(
-            sound = sound.asText(),
-            source = source.nullOrText(),
-            volume = volume.nullOrFloat() ?: 1f,
-            pitch = pitch.nullOrFloat() ?: 1f,
-            seed = seed.nullOrLong(),
-        )
-    }
-
-    private fun JsonNode?.nullOrText() = if (this == null || this is NullNode) null else asText()
-
-    private fun JsonNode?.nullOrFloat() = if (this == null || this is NullNode) null else asText().toFloat()
-
-    private fun JsonNode?.nullOrLong() = if (this == null || this is NullNode) null else asText().toLong()
-
-    object Fields {
-        const val TEXT = "text"
-
-        const val ACTIONBAR = "actionbar"
-
-        const val TITLE = "title"
-        const val SUBTITLE = "subtitle"
-        const val FADEIN = "fadein"
-        const val FADE_IN = "fade-in"
-        const val STAY = "stay"
-        const val FADEOUT = "fadeout"
-        const val FADE_OUT = "fade-out"
-
-        const val SOUND = "sound"
-        const val SOURCE = "source"
-        const val VOLUME = "volume"
-        const val PITCH = "pitch"
-        const val SEED = "seed"
     }
 }
