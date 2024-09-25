@@ -3,6 +3,6 @@ plugins {
 }
 
 dependencies {
-    implementation(projects.forasCore)
+    api(projects.forasCore)
     implementation(libs.jackson.databind)
 }
