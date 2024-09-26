@@ -40,5 +40,5 @@ jobs:
         run: |
           VERSION=$(grep 'version=' gradle.properties | cut -d '=' -f2)
           if [[ $VERSION == *-SNAPSHOT ]]; then
-            ./gradlew build
+            ./gradlew publish
           fi
