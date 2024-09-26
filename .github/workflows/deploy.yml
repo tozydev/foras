@@ -48,7 +48,7 @@ jobs:
 
       - name: Publish with Gradle
         id: publish
-        run: ./gradlew ${{ inputs.gradle-publish-args }}
+        run: ./gradlew publish
         env:
           ORG_GRADLE_PROJECT_velaUsername: ${{ secrets.VELA_USERNAME }}
           ORG_GRADLE_PROJECT_velaPassword: ${{ secrets.VELA_PASSWORD }}
