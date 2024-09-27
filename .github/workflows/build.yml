@@ -9,22 +9,18 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      jdk-version: ${{ steps.get-jdk-version.outputs.version }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Get JDK version
-        id: get-jdk-version
-        run: echo "version=$(grep 'jdkVersion' gradle.properties | cut -d '=' -f2)" >> "$GITHUB_OUTPUT"
+        run: echo "JDK_VERSION=$(grep 'jdkVersion' gradle.properties | cut -d '=' -f2)" >> "$GITHUB_ENV"
 
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
           distribution: zulu
-          java-version: ${{ steps.get-jdk-version.outputs.version }}
+          java-version: ${{ env.JDK_VERSION }}
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -36,52 +32,3 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew build
-
-  determine-snapshot:
-    needs: build
-    if: github.ref_name == 'main'
-    runs-on: ubuntu-latest
-    outputs:
-      is-snapshot: ${{ steps.check.outputs.is-snapshot }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Determine snapshot version
-        id: check
-        run: |
-          VERSION=$(grep 'version=' gradle.properties | cut -d '=' -f2)
-          if [[ $VERSION == *-SNAPSHOT ]]; then
-            echo "is-snapshot=true" >> "$GITHUB_OUTPUT"
-          fi
-
-  publish-snapshot:
-    needs: [ build, determine-snapshot ]
-    if: github.ref_name == 'main' && needs.determine-snapshot.outputs.is-snapshot
-    runs-on: ubuntu-latest
-    environment: Vela Snapshots
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: zulu
-          java-version: ${{ needs.build.outputs.jdk-version }}
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Grant execute permission to gradlew
-        run: chmod +x gradlew
-
-      - name: Publish snapshot
-        run: ./gradlew publish
-        env:
-          ORG_GRADLE_PROJECT_velaUsername: ${{ secrets.VELA_USERNAME }}
-          ORG_GRADLE_PROJECT_velaPassword: ${{ secrets.VELA_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}

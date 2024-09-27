@@ -1,8 +1,8 @@
 name: Gradle deploy
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
 
 jobs:
   release:
@@ -21,9 +21,9 @@ jobs:
         with:
           config-file: .github/release-please/config.json
           manifest-file: .github/release-please/manifest.json
-          skip-github-pull-request: true
 
   publish:
+    needs: release
     if: needs.release.outputs.release-created == 'true'
     runs-on: ubuntu-latest
     environment: Vela
